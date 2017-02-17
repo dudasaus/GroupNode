@@ -10,7 +10,7 @@ var qparse = require('./qparse.js');
 class actionEmitter extends Emitter {}
 
 // SERVER TO GET OAUTH TOKEN
-
+/*
 // PORT
 const PORT=3000;
 var token = -1;
@@ -49,20 +49,40 @@ server.listen(PORT, function(){
 // Open GroupMe URL
 var gmUrl = 'https://oauth.groupme.com/oauth/authorize?client_id=ZpEe5Yl2VnZAAOomwQ3SZFJ2TCsnGbKi51waJTZeQQZ6pSL5';
 open(gmUrl);
-
+*/
 // END SERVER
 
+/* PLAN
+
+    0. startUp: load saved users (1)
+    1. Select an existing user (3) or add a new user (2)
+    2. Set up server and stuff to add a user and get a token (3)
+    3. Authenticate the user by getting their user info (4)
+        - if authentication fails, go to (2)
+    4. get the user groups (5)
+    5. select a user group (6)
+    6. send messages, or type '.exit' to quit the application
+
+*/
 
 // MAIN
 
 var main = {
-    state: 'gettingGroups',
+    state: 'startUp',
+    users: [],
+    user: [],
     groups: [],
     groupId: -1,
     msgId: 0,
     actions: new actionEmitter(),
     step: function() {
-        if (this.state == 'gettingGroups') {
+        if (this.state == 'startUp') {
+            startUp(this);
+        }
+        else if (this.state == 'selectUser') {
+            selectUser(this);
+        }
+        else if (this.state == 'gettingGroups') {
             getGroups(this);
         }
         else if (this.state == 'selectGroup') {
@@ -70,6 +90,31 @@ var main = {
         }
     }
 }
+
+// Emitters for handling async stuff
+
+main.actions.once('startUp', (arr) => {
+    main.users = arr;
+    main.state = 'selectUser';
+    main.step();
+});
+main.actions.once('selectUser', (num) => {
+    num = parseInt(num);
+    if (isNaN(num) || num < 0 || num > main.users.length) {
+        console.log('Invalid value');
+        selectUser(main);
+    }
+    else {
+        if (num == 0) {
+            // Add user
+            main.state = 'addUser';
+        }
+        else {
+            main.user = main.users[num - 1];
+            main.state = 'getUserInfo';
+        }
+    }
+});
 main.actions.once('getGroups', (arr) => {
     main.groups = arr;
     main.state = 'selectGroup';
@@ -99,7 +144,39 @@ main.actions.on('sendMessages', (msg) => {
     }
 });
 
+// Start doing stuff
+main.step();
+
 // END MAIN
+
+// STARTUP
+
+function startUp(m) {
+    var dataJson = 'data.json';
+    fs.readFile(dataJson, 'utf8', (err, data) => {
+        if (err) {
+            console.log(err);
+        }
+        else {
+            m.actions.emit('startUp', JSON.parse(data).users);
+        }
+    });
+}
+
+// END STARTUP
+
+// USERS
+
+function selectUser(m) {
+    console.log('(0) Add new user');
+    for (var i = 0; i < m.users.length; i++) {
+        console.log(`(${i + 1}) ${m.users[i][0]}`);
+    }
+
+    console.log('Select a user by entering the choice number');
+}
+
+// END USERS
 
 // GROUPS
 
@@ -185,7 +262,10 @@ function sendMessage(m, msg) {
 process.stdin.on('readable', () => {
     var chunk = process.stdin.read();
     if (chunk !== null) {
-        if (main.state == 'selectGroup') {
+        if (main.state == 'selectUser') {
+            main.actions.emit('selectUser', chunk);
+        }
+        else if (main.state == 'selectGroup') {
             main.actions.emit('selectGroup', chunk);
         }
         else if (main.state == 'sendMessages') {
