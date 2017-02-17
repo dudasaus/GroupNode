@@ -59,6 +59,7 @@ var main = {
     state: 'gettingGroups',
     groups: [],
     groupId: -1,
+    msgId: 0,
     actions: new actionEmitter(),
     step: function() {
         if (this.state == 'gettingGroups') {
@@ -82,9 +83,19 @@ main.actions.on('selectGroup', (num) => {
     }
     else {
         main.groupId = main.groups[num][0];
+        main.msgId = main.groups[num][2];
         main.state = 'sendMessages';
         console.log('Entering group ' + main.groups[num][1]);
+        console.log('Message ID: ' + main.msgId);
         main.step();
+    }
+});
+main.actions.on('sendMessages', (msg) => {
+    if (msg + '' == ".exit\n") {
+        process.exit(0);
+    }
+    else {
+        sendMessage(main, msg);
     }
 });
 
@@ -112,7 +123,8 @@ function getGroups(m) {
         res.on('end', () => {
             groupDataFull = JSON.parse(resultString).response;
             for (var i = 0; i < groupDataFull.length; i++) {
-                groupData.push([groupDataFull[i].id, groupDataFull[i].name]);
+                groupData.push([groupDataFull[i].id, groupDataFull[i].name,
+                groupDataFull[i].messages.count]);
             }
             m.actions.emit('getGroups', groupData);
         });
@@ -130,6 +142,44 @@ function selectGroup(m) {
 
 // END GROUPS
 
+// MESSAGING
+
+function sendMessage(m, msg) {
+    // Data to post
+    var data = JSON.stringify({
+        'message': {
+            'source_guid': m.msgId++,
+            'text': msg + ''
+        }
+    });
+
+    var options = {
+        hostname: 'api.groupme.com',
+        path: '/v3/groups/' + m.groupId + '/messages?token=' + token,
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }
+
+    // POST request
+    var req = https.request(options, (res) => {
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+            console.log("BODY: " + chunk);
+        });
+        res.on('end', () => {
+            console.log('no more data');
+        });
+    });
+    req.on('error', (e) => {
+        console.log(e.message);
+    });
+    req.end(data);
+}
+
+// END MESSAGING
+
 // INPUT
 
 process.stdin.on('readable', () => {
@@ -137,6 +187,9 @@ process.stdin.on('readable', () => {
     if (chunk !== null) {
         if (main.state == 'selectGroup') {
             main.actions.emit('selectGroup', chunk);
+        }
+        else if (main.state == 'sendMessages') {
+            main.actions.emit('sendMessages', chunk);
         }
     }
 });
