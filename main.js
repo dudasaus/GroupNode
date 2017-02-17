@@ -9,50 +9,12 @@ var qparse = require('./qparse.js');
 // Custom emitter class
 class actionEmitter extends Emitter {}
 
-// SERVER TO GET OAUTH TOKEN
-/*
-// PORT
-const PORT=3000;
-var token = -1;
-
-// function to handle server requests
-function handleRequest(request, response){
-    if (request.url.substr(0,10) == "/groupnode") {
-        var info = qparse.parse(request.url);
-
-        // Check if we got the token
-        if (info['access_token']) {
-            token = info['access_token'];
-            // console.log("Token: " + token);
-            var html = fs.readFileSync('success.html');
-            response.end(html);
-            main.step();
-        }
-        else {
-            var html = fs.readFileSync('error.html');
-            response.end(html);
-        }
-    }
-    else {
-        response.end("404");
-    }
-}
-
-// Create the server
-var server = http.createServer(handleRequest);
-
-// Start the server
-server.listen(PORT, function(){
-    // console.log("Server listening on: http://localhost:%s", PORT);
-});
-
-// Open GroupMe URL
-var gmUrl = 'https://oauth.groupme.com/oauth/authorize?client_id=ZpEe5Yl2VnZAAOomwQ3SZFJ2TCsnGbKi51waJTZeQQZ6pSL5';
-open(gmUrl);
-*/
-// END SERVER
-
 /* PLAN
+
+    New plan:
+    0. startUp: load saved token and message id
+        - (1) try to Authenticate exitsing user
+        - (2) add new user otherwise
 
     0. startUp: load saved users (1)
     1. Select an existing user (3) or add a new user (2)
@@ -69,14 +31,16 @@ open(gmUrl);
 
 var main = {
     state: 'startUp',
-    users: [],
-    user: '',
     groups: [],
     groupId: -1,
     token: -1,
     msgId: 0,
     server: {},
     actions: new actionEmitter(),
+    dataFileName: 'data.json',
+    updateFile: function () {
+
+    },
     step: function() {
         if (this.state == 'startUp') {
             startUp(this);
@@ -102,9 +66,13 @@ var main = {
 // Emitters for handling async stuff
 
 // Occurs when you've loaded the users from local data
-main.actions.once('startUp', (arr) => {
-    main.users = arr;
-    main.state = 'selectUser';
+main.actions.once('startUp', (data) => {
+    main.msgId = data.msgId;
+    main.token = data.token;
+    if (main.token == "none")
+        main.state = 'addUser';
+    else
+        main.state = 'getUserInfo';
     main.step();
 });
 
@@ -131,12 +99,10 @@ main.actions.on('selectUser', (num) => {
 // Occurs when the server attempts to add a user
 main.actions.on('addUser', (token) => {
     if (token == -1) {
-        console.log("Failed to authenticate new user");
-        main.state = 'selectUser';
+        console.log("Failed to authenticate new user, try again?");
     }
     else {
         main.token = token;
-        console.log("Token: " + token);
         main.state = 'getUserInfo';
     }
     main.server.close();
@@ -150,8 +116,8 @@ main.actions.on('getUserInfo', (name) => {
         main.state = 'selectUser';
     }
     else {
-        main.users.push([name, main.token]);
-        main.user = name;
+        // main.users.push([name, main.token]);
+        // main.user = name;
         main.state = 'getGroups'
         console.log("Welcome, " + name);
     }
@@ -206,7 +172,7 @@ function startUp(m) {
             console.log(err);
         }
         else {
-            m.actions.emit('startUp', JSON.parse(data).users);
+            m.actions.emit('startUp', JSON.parse(data));
         }
     });
 }
@@ -216,7 +182,6 @@ function startUp(m) {
 // USERS
 
 function selectUser(m) {
-    console.log(m.state);
     console.log('(0) Add new user');
     for (var i = 0; i < m.users.length; i++) {
         console.log(`(${i + 1}) ${m.users[i][0]}`);
