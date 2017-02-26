@@ -5,6 +5,7 @@ var fs = require('fs');
 var open = require('open');
 var Emitter = require('events');
 var qparse = require('./qparse.js');
+var screen = require('./screen.js');
 
 // Custom emitter class
 class actionEmitter extends Emitter {}
@@ -31,7 +32,8 @@ class actionEmitter extends Emitter {}
 
 var main = {
     state: 'startUp',
-    groups: [],
+    groupNames: [],
+    groupIds: [],
     groupId: -1,
     token: -1,
     msgId: 0,
@@ -68,6 +70,8 @@ var main = {
         }
     }
 }
+
+screen.setEmitter(main.actions);
 
 // Emitters for handling async stuff
 
@@ -126,33 +130,36 @@ main.actions.on('getUserInfo', (name) => {
         // main.users.push([name, main.token]);
         // main.user = name;
         main.state = 'getGroups'
-        console.log("Welcome, " + name);
+        screen.setName(name);
+        //console.log("Welcome, " + name);
     }
     main.step();
 });
 
 // Occurs once the groups info has loaded from the https request
-main.actions.once('getGroups', (arr) => {
-    main.groups = arr;
+main.actions.once('getGroups', (names, ids) => {
+    main.groupNames = names;
+    main.groupIds = ids;
     main.state = 'selectGroup';
     main.step();
 });
 
 // Occurs when input for the select gorup screen is given
 main.actions.on('selectGroup', (num) => {
-    num = parseInt(num);
+    /*num = parseInt(num);
     if (isNaN(num) || num < 0 || num >= main.groups.length) {
         console.log('Invalid value');
         selectGroup(main);
     }
-    else {
-        main.groupId = main.groups[num][0];
+    else {*/
+        main.groupId = main.groupIds[num];
         // main.msgId = main.groups[num][2];
         main.state = 'sendMessages';
-        console.log('Entering group ' + main.groups[num][1]);
-        console.log('Message ID: ' + main.msgId);
+        // console.log('Entering group ' + main.groups[num][1]);
+        // console.log('Message ID: ' + main.msgId);
+        screen.showMessage('Entering group ' + main.groupNames[num]);
         main.step();
-    }
+    //}
 });
 
 // Occurs when input is given when messaging a group
@@ -174,6 +181,7 @@ main.step();
 
 function startUp(m) {
     var dataJson = 'data.json';
+    screen.showTitleScreen();
     fs.readFile(dataJson, 'utf8', (err, data) => {
         if (err) {
             console.log(err);
@@ -275,7 +283,8 @@ function getGroups(m) {
 
     var resultString = '';
     var groupDataFull;
-    var groupData = [];
+    var groupNames = [];
+    var groupIds = [];
 
     var options = {
         hostname: 'api.groupme.com',
@@ -291,10 +300,12 @@ function getGroups(m) {
         res.on('end', () => {
             groupDataFull = JSON.parse(resultString).response;
             for (var i = 0; i < groupDataFull.length; i++) {
-                groupData.push([groupDataFull[i].id, groupDataFull[i].name,
-                groupDataFull[i].messages.count]);
+                //groupData.push([groupDataFull[i].id, groupDataFull[i].name,
+                //groupDataFull[i].messages.count]);
+                groupNames.push(groupDataFull[i].name);
+                groupIds.push(groupDataFull[i].id);
             }
-            m.actions.emit('getGroups', groupData);
+            m.actions.emit('getGroups', groupNames, groupIds);
         });
     });
 
@@ -302,10 +313,13 @@ function getGroups(m) {
 }
 
 function selectGroup(m) {
+    /*
     for (var i = 0; i < m.groups.length; i++) {
         console.log(`(${i}) ${m.groups[i][1]}`);
     }
     console.log('Select a group by entering its number');
+    */
+    screen.showGroupsScreen(m.groupNames);
 }
 
 // END GROUPS
