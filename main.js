@@ -39,7 +39,13 @@ var main = {
     actions: new actionEmitter(),
     dataFileName: 'data.json',
     updateFile: function () {
-
+        var output = JSON.stringify({
+            'token' : this.token,
+            'msgId' : this.msgId
+        });
+        fs.writeFile(this.dataFileName, output, (err) => {
+            if (err) throw err;
+        });
     },
     step: function() {
         if (this.state == 'startUp') {
@@ -104,6 +110,7 @@ main.actions.on('addUser', (token) => {
     else {
         main.token = token;
         main.state = 'getUserInfo';
+        main.updateFile();
     }
     main.server.close();
     main.step();
@@ -140,7 +147,7 @@ main.actions.on('selectGroup', (num) => {
     }
     else {
         main.groupId = main.groups[num][0];
-        main.msgId = main.groups[num][2];
+        // main.msgId = main.groups[num][2];
         main.state = 'sendMessages';
         console.log('Entering group ' + main.groups[num][1]);
         console.log('Message ID: ' + main.msgId);
@@ -334,6 +341,7 @@ function sendMessage(m, msg) {
         });
         res.on('end', () => {
             // console.log('no more data');
+            m.updateFile();
         });
     });
     req.on('error', (e) => {
