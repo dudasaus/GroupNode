@@ -1,14 +1,17 @@
 {
-  "name": "GroupNode",
-  "version": "0.0.1",
-  "description": "A terminal interface for GroupMe",
-  "license": "GPL-3.0",
-  "repository": {
-    "type": "git",
-    "url": "https//github.com/dudasaus/GroupNode"
-  },
-  "dependencies": {
-    "blessed": "0.1.81",
-    "open": "0.0.5"
-  }
+    "name": "GroupNode",
+    "version": "0.0.1",
+    "description": "A terminal interface for GroupMe",
+    "license": "GPL-3.0",
+    "repository": {
+        "type": "git",
+        "url": "https//github.com/dudasaus/GroupNode"
+    },
+    "dependencies": {
+        "blessed": "0.1.81",
+        "open": "0.0.5"
+    },
+    "scripts": {
+         "start" : "node main.js"
+     }
 }
