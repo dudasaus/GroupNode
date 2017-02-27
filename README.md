@@ -4,9 +4,9 @@ A terminal interface for GroupMe made with Node JS.
 ## Instructions
 Make sure you have Node JS installed.
 ### Clone the repository and enter the directory
-`git clone https://github.com/dudasaus/GroupNode.git
+`git clone https://github.com/dudasaus/GroupNode.git`
 
-cd GroupNode`
+`cd GroupNode`
 ### Install dependencies
 `npm install`
 ### Run the application
