@@ -132,6 +132,8 @@ var messagingOutput = blessed.box({
     width: '100%',
     height: screen.rows - 3,
     scrollable: true,
+    //alwaysScroll: true,
+    //scrollbar: true,
     padding: 1,
     tags: true,
     style: {
@@ -171,7 +173,8 @@ messagingInput.key(['/'], () => {
 });
 
 function addMessage(msg, usr) {
-    messagingOutput.content += `{blue-fg}{bold}${usr}:{/} ${msg}\n`;
+    messagingOutput.content += (`{blue-fg}{bold}${usr}:{/} ${msg}\n`);
+    messagingOutput.setScrollPerc(100);
     screen.render();
 }
 
@@ -181,89 +184,17 @@ messagingScreen.append(messagingInput);
 function showMessagingScreen(msg) {
     clearScreen();
     if (msg) {
-        messagingOutput.content = `{red-fg}{bold}${msg}{/}\n`;
+        messagingOutput.content += (`{red-fg}{bold}${msg}{/}\n`);
     }
     screen.append(messagingScreen);
     messagingInput.focus();
     screen.render();
 }
 
-var output = blessed.box({
-    top: 0,
-    left: 0,
-    width: screen.cols,
-    height: screen.rows - 3,
-    padding: 1,
-    content: 'hello world',
-    style: {
-        fg: 'white',
-        bg: 'red'
-    }
-});
-
-var listTest = blessed.list({
-    top: 0,
-    left: 0,
-    width: screen.cols,
-    height: screen.rows - 3,
-    padding: 1,
-    keys: true,
-    style: {
-        selected: {
-            bg: 'white',
-            fg: 'black'
-        }
-
-    }
-});
-listTest.setItems(['option 1', 'option 2', 'option 3', 'option 4', 'option 5']);
-
-listTest.on('select', (a) => {
-    ibox.setValue(listTest.value);
-    screen.render();
-});
-
-var ibox = blessed.textbox({
-    bottom: 0,
-    left: 0,
-    width: screen.cols,
-    height: 3,
-    padding: 1,
-    value: 'hello',
-    style: {
-        fg: 'black',
-        bg: 'white'
-    }
-});
-
-
-//screen.append(ibox);
-//screen.append(listTest);
-//listTest.focus();
-//screen.append(output);
-
-/* showTitleScreen();
-setTimeout(() => {
-    showGroupsScreen(['option 1', 'option 2', 'option 3', 'option 4', 'option 5'])
-}, 3000); */
-
-function inputter() {
-    ibox.setValue("");
-    screen.render();
-    ibox.readInput( () => {
-        output.content += "\n" + ibox.value;
-        ibox.setValue("Press / to type");
-        screen.render();
-    });
-}
-
+// Other stuff
 screen.key(['escape', 'C-c'], () => {
     return process.exit(0);
 });
-
-/*screen.key(['/'], () => {
-    inputter();
-});*/
 
 module.exports = {
     setName,

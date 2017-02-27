@@ -38,6 +38,7 @@ var main = {
     token: -1,
     msgId: 0,
     server: {},
+    lastId: -1,
     actions: new actionEmitter(),
     dataFileName: 'data.json',
     updateFile: function () {
@@ -159,6 +160,10 @@ main.actions.on('selectGroup', (num) => {
         // console.log('Message ID: ' + main.msgId);
         // screen.showMessage('Entering group ' + main.groupNames[num]);
         screen.showMessagingScreen("Now messaging " + main.groupNames[num]);
+        getMessages(main, 5);
+        setInterval( () => {
+            getMessages(main,5);
+        }, 5000);
         main.step();
     //}
 });
@@ -168,7 +173,11 @@ main.actions.on('sendMessages', (msg) => {
     /*if (msg + '' == ".exit\n") {
         process.exit(0);
     }*/
-    sendMessage(main, msg);
+    if (msg == 'load') {
+        getMessages(main);
+    }
+    else
+        sendMessage(main, msg);
 });
 
 // Start doing stuff
@@ -354,7 +363,17 @@ function sendMessage(m, msg) {
         });
         res.on('end', () => {
             // console.log('no more data');
-            screen.addMessage(msg, 'You');
+            var result = JSON.parse(resultString);
+            if (result.meta.code == '201') {
+                var msgData = result.response.message;
+                //screen.showMessage(msgData.toString());//.toString();
+                screen.addMessage(msgData.text, msgData.name);
+                //m.lastId = msgData.id;
+            }
+            else {
+                screen.showMessage(result.meta.errors.toString(), 'Error');
+            }
+            m.msgId++;
             m.updateFile();
         });
     });
@@ -364,10 +383,46 @@ function sendMessage(m, msg) {
     req.end(data);
 }
 
+function getMessages(m, limit = -1) {
+
+    var resultString = '';
+
+    var lid = '';
+    if (m.lastId != -1) lid = `&since_id=${m.lastId}`;
+    if (limit != -1) lid += `&limit=${limit}`;
+
+    var options = {
+        hostname: 'api.groupme.com',
+        path: '/v3/groups/' + m.groupId + '/messages?token=' + m.token + lid,
+        method: 'GET'
+    }
+
+    var req = https.request(options, (res) => {
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+            resultString += chunk;
+        });
+        res.on('end', () => {
+            if (resultString != '') {
+                var msgData = JSON.parse(resultString).response.messages;
+                for (var i = 0; i < msgData.length; i++) {
+                    var j = msgData.length - 1 - i;
+                    screen.addMessage(msgData[j].text, msgData[j].name);
+                    m.lastId = msgData[j].id;
+                }
+            }
+            //m.actions.emit('getGroups', groupNames, groupIds);
+        });
+    });
+
+    req.end();
+}
+
+
 // END MESSAGING
 
 // INPUT
-
+/*
 process.stdin.on('readable', () => {
     var chunk = process.stdin.read();
     if (chunk !== null) {
@@ -382,5 +437,5 @@ process.stdin.on('readable', () => {
         }
     }
 });
-
+*/
 // END INPUT
