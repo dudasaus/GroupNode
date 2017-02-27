@@ -118,6 +118,76 @@ function showGroupsScreen(arr) {
     screen.render();
 }
 
+// Messaging screen
+var messagingScreen = blessed.box({
+    top: 0,
+    left: 0,
+    height: '100%',
+    width: '100%'
+});
+
+var messagingOutput = blessed.box({
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: screen.rows - 3,
+    scrollable: true,
+    padding: 1,
+    tags: true,
+    style: {
+        bg: 'black',
+        fg: 'white'
+    }
+});
+
+var inputText = "Press / to send a message";
+var messageTyping = false;
+var messagingInput = blessed.textbox({
+    width: '100%',
+    height: 3,
+    top: screen.rows - 3,
+    left: 0,
+    padding: 1,
+    value: inputText,
+    style: {
+        bg: 'white',
+        fg: 'black'
+    }
+});
+messagingInput.key(['/'], () => {
+    if (!messageTyping) {
+        messageTyping = true;
+        messagingInput.value = '';
+        screen.render();
+        messagingInput.readInput( () => {
+            //messagingOutput.content += messagingInput.value + '\n';
+            emitter.emit('sendMessages', messagingInput.value);
+            messagingInput.setValue(inputText);
+            messagingInput.focus();
+            messageTyping = false;
+            screen.render();
+        });
+    }
+});
+
+function addMessage(msg, usr) {
+    messagingOutput.content += `{blue-fg}{bold}${usr}:{/} ${msg}\n`;
+    screen.render();
+}
+
+messagingScreen.append(messagingOutput);
+messagingScreen.append(messagingInput);
+
+function showMessagingScreen(msg) {
+    clearScreen();
+    if (msg) {
+        messagingOutput.content = `{red-fg}{bold}${msg}{/}\n`;
+    }
+    screen.append(messagingScreen);
+    messagingInput.focus();
+    screen.render();
+}
+
 var output = blessed.box({
     top: 0,
     left: 0,
@@ -191,14 +261,16 @@ screen.key(['escape', 'C-c'], () => {
     return process.exit(0);
 });
 
-screen.key(['/'], () => {
+/*screen.key(['/'], () => {
     inputter();
-});
+});*/
 
 module.exports = {
     setName,
     setEmitter,
     showMessage,
     showTitleScreen,
-    showGroupsScreen
+    showGroupsScreen,
+    showMessagingScreen,
+    addMessage
 };

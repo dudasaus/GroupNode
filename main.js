@@ -157,19 +157,18 @@ main.actions.on('selectGroup', (num) => {
         main.state = 'sendMessages';
         // console.log('Entering group ' + main.groups[num][1]);
         // console.log('Message ID: ' + main.msgId);
-        screen.showMessage('Entering group ' + main.groupNames[num]);
+        // screen.showMessage('Entering group ' + main.groupNames[num]);
+        screen.showMessagingScreen("Now messaging " + main.groupNames[num]);
         main.step();
     //}
 });
 
 // Occurs when input is given when messaging a group
 main.actions.on('sendMessages', (msg) => {
-    if (msg + '' == ".exit\n") {
+    /*if (msg + '' == ".exit\n") {
         process.exit(0);
-    }
-    else {
-        sendMessage(main, msg);
-    }
+    }*/
+    sendMessage(main, msg);
 });
 
 // Start doing stuff
@@ -355,6 +354,7 @@ function sendMessage(m, msg) {
         });
         res.on('end', () => {
             // console.log('no more data');
+            screen.addMessage(msg, 'You');
             m.updateFile();
         });
     });
