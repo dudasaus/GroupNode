@@ -10,24 +10,6 @@ var screen = require('./screen.js');
 // Custom emitter class
 class actionEmitter extends Emitter {}
 
-/* PLAN
-
-    New plan:
-    0. startUp: load saved token and message id
-        - (1) try to Authenticate exitsing user
-        - (2) add new user otherwise
-
-    0. startUp: load saved users (1)
-    1. Select an existing user (3) or add a new user (2)
-    2. Set up server and stuff to add a user and get a token (3)
-    3. Authenticate the user by getting their user info (4)
-        - if authentication fails, go to (2)
-    4. get the user groups (5)
-    5. select a user group (6)
-    6. send messages, or type '.exit' to quit the application
-
-*/
-
 // MAIN
 
 var main = {
@@ -129,11 +111,8 @@ main.actions.on('getUserInfo', (name) => {
         main.state = 'selectUser';
     }
     else {
-        // main.users.push([name, main.token]);
-        // main.user = name;
         main.state = 'getGroups'
         screen.setName(name);
-        //console.log("Welcome, " + name);
     }
     main.step();
 });
@@ -148,32 +127,18 @@ main.actions.once('getGroups', (names, ids) => {
 
 // Occurs when input for the select gorup screen is given
 main.actions.on('selectGroup', (num) => {
-    /*num = parseInt(num);
-    if (isNaN(num) || num < 0 || num >= main.groups.length) {
-        console.log('Invalid value');
-        selectGroup(main);
-    }
-    else {*/
-        main.groupId = main.groupIds[num];
-        // main.msgId = main.groups[num][2];
-        main.state = 'sendMessages';
-        // console.log('Entering group ' + main.groups[num][1]);
-        // console.log('Message ID: ' + main.msgId);
-        // screen.showMessage('Entering group ' + main.groupNames[num]);
-        screen.showMessagingScreen("Now messaging " + main.groupNames[num]);
-        getMessages(main, 5);
-        setInterval( () => {
-            getMessages(main,5);
-        }, 5000);
-        main.step();
-    //}
+    main.groupId = main.groupIds[num];
+    main.state = 'sendMessages';
+    screen.showMessagingScreen("Now messaging " + main.groupNames[num]);
+    getMessages(main, 5);
+    setInterval( () => {
+        getMessages(main,20);
+    }, 5000);
+    main.step();
 });
 
 // Occurs when input is given when messaging a group
 main.actions.on('sendMessages', (msg) => {
-    /*if (msg + '' == ".exit\n") {
-        process.exit(0);
-    }*/
     if (msg == 'load') {
         getMessages(main);
     }
@@ -193,7 +158,14 @@ function startUp(m) {
     screen.showTitleScreen();
     fs.readFile(dataJson, 'utf8', (err, data) => {
         if (err) {
-            console.log(err);
+            var stuff = {
+                "token" : "none",
+                "msgId" : "0"
+            }
+            fs.writeFile(dataJson, JSON.stringify(stuff), (err) => {
+                if (err) screen.showMessage("Error creating " + dataJson);
+            });
+            m.actions.emit('startUp', stuff);
         }
         else {
             m.actions.emit('startUp', JSON.parse(data));
@@ -226,7 +198,6 @@ function addUser(m) {
             // Check if we got the token
             if (info['access_token']) {
                 var tempToken = info['access_token'];
-                // console.log("Token: " + token);
                 var html = fs.readFileSync('success.html');
                 response.end(html);
                 m.actions.emit('addUser', tempToken);
@@ -240,7 +211,6 @@ function addUser(m) {
         }
         else {
             response.end("404");
-            // m.actions.emit('addUser', -1);
         }
 
     });
@@ -310,8 +280,6 @@ function getGroups(m) {
         res.on('end', () => {
             groupDataFull = JSON.parse(resultString).response;
             for (var i = 0; i < groupDataFull.length; i++) {
-                //groupData.push([groupDataFull[i].id, groupDataFull[i].name,
-                //groupDataFull[i].messages.count]);
                 groupNames.push(groupDataFull[i].name);
                 groupIds.push(groupDataFull[i].id);
             }
@@ -323,12 +291,6 @@ function getGroups(m) {
 }
 
 function selectGroup(m) {
-    /*
-    for (var i = 0; i < m.groups.length; i++) {
-        console.log(`(${i}) ${m.groups[i][1]}`);
-    }
-    console.log('Select a group by entering its number');
-    */
     screen.showGroupsScreen(m.groupNames);
 }
 
@@ -364,23 +326,20 @@ function sendMessage(m, msg) {
             resultString += chunk;
         });
         res.on('end', () => {
-            // console.log('no more data');
             var result = JSON.parse(resultString);
             if (result.meta.code == '201') {
                 var msgData = result.response.message;
-                //screen.showMessage(msgData.toString());//.toString();
-                screen.addMessage(msgData.text, msgData.name);
-                //m.lastId = msgData.id;
+                screen.addMessage(msgData.text, msgData.name, 'green');
             }
             else {
-                screen.showMessage(result.meta.errors.toString(), 'Error');
+                screen.showMessage(result.meta.errors.toString());
             }
             m.msgId++;
             m.updateFile();
         });
     });
     req.on('error', (e) => {
-        console.log(e.message);
+        screen.showMessage(e.message);
     });
     req.end(data);
 }
@@ -406,15 +365,20 @@ function getMessages(m, limit = -1) {
         });
         res.on('end', () => {
             if (resultString != '') {
-                var msgData = JSON.parse(resultString).response.messages;
-                for (var i = 0; i < msgData.length; i++) {
-                    var j = msgData.length - 1 - i;
-                    if (msgData[j].user_id != m.usrId)
-                        screen.addMessage(msgData[j].text, msgData[j].name);
-                    m.lastId = msgData[j].id;
+                var result = JSON.parse(resultString);
+                if (result.meta.code == '200') {
+                    var msgData = result.response.messages;
+                    for (var i = 0; i < msgData.length; i++) {
+                        var j = msgData.length - 1 - i;
+                        if (msgData[j].user_id != m.usrId && limit > 5)
+                            screen.addMessage(msgData[j].text, msgData[j].name);
+                        m.lastId = msgData[j].id;
+                    }
+                }
+                else {
+                    screen.showMessage(JSON.stringify(result));
                 }
             }
-            //m.actions.emit('getGroups', groupNames, groupIds);
         });
     });
 
@@ -423,22 +387,3 @@ function getMessages(m, limit = -1) {
 
 
 // END MESSAGING
-
-// INPUT
-/*
-process.stdin.on('readable', () => {
-    var chunk = process.stdin.read();
-    if (chunk !== null) {
-        if (main.state == 'selectUser') {
-            main.actions.emit('selectUser', chunk);
-        }
-        else if (main.state == 'selectGroup') {
-            main.actions.emit('selectGroup', chunk);
-        }
-        else if (main.state == 'sendMessages') {
-            main.actions.emit('sendMessages', chunk);
-        }
-    }
-});
-*/
-// END INPUT

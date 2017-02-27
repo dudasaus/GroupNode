@@ -51,10 +51,10 @@ var titleScreen = blessed.box({
 });
 
 var tsContent = blessed.BigText({
-    content: 'Group Node',
+    content: 'GroupNode',
     left: 'center',
     top: 'center',
-    width: 8 * ('Group Node').length,
+    width: 8 * ('GroupNode').length,
     height: 14,
     style: {
         bg: 'blue',
@@ -172,8 +172,8 @@ messagingInput.key(['/'], () => {
     }
 });
 
-function addMessage(msg, usr) {
-    messagingOutput.content += (`{blue-fg}{bold}${usr}:{/} ${msg}\n`);
+function addMessage(msg, usr, color='blue') {
+    messagingOutput.content += (`{${color}-fg}{bold}${usr}:{/} ${msg}\n`);
     messagingOutput.setScrollPerc(100);
     screen.render();
 }
