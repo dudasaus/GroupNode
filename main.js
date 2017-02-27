@@ -39,6 +39,7 @@ var main = {
     msgId: 0,
     server: {},
     lastId: -1,
+    usrId: -1,
     actions: new actionEmitter(),
     dataFileName: 'data.json',
     updateFile: function () {
@@ -124,7 +125,7 @@ main.actions.on('addUser', (token) => {
 // Occurs when we try to get the user info
 main.actions.on('getUserInfo', (name) => {
     if (name == -1) {
-        console.log("Authentication failed.");
+        screen.showMessage("Authentication failed.");
         main.state = 'selectUser';
     }
     else {
@@ -271,6 +272,7 @@ function getUserInfo(m) {
         res.on('end', () => {
             var response = JSON.parse(resultString).response;
             if (response) {
+                m.usrId = response.id;
                 m.actions.emit('getUserInfo', response.name);
             }
             else {
@@ -407,7 +409,8 @@ function getMessages(m, limit = -1) {
                 var msgData = JSON.parse(resultString).response.messages;
                 for (var i = 0; i < msgData.length; i++) {
                     var j = msgData.length - 1 - i;
-                    screen.addMessage(msgData[j].text, msgData[j].name);
+                    if (msgData[j].user_id != m.usrId)
+                        screen.addMessage(msgData[j].text, msgData[j].name);
                     m.lastId = msgData[j].id;
                 }
             }

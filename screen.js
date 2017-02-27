@@ -54,7 +54,7 @@ var tsContent = blessed.BigText({
     content: 'Group Node',
     left: 'center',
     top: 'center',
-    width: '100%',
+    width: 8 * ('Group Node').length,
     height: 14,
     style: {
         bg: 'blue',
